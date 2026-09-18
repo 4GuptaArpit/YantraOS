@@ -149,6 +149,9 @@ def trigger_gnani_call(incident_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "SUCCESS", "call_summary": call_data}
 
+# In-memory attempt tracking for doorstep OTP brute-force defense
+otp_failed_attempts = {}
+
 # 4. Rail Actions: Verify Doorstep OTP & Release Pine Labs Escrow
 @app.post("/api/rails/pinelabs/verify-otp/{incident_id}")
 def verify_otp(incident_id: int, entered_otp: str, db: Session = Depends(get_db)):
@@ -156,7 +159,22 @@ def verify_otp(incident_id: int, entered_otp: str, db: Session = Depends(get_db)
     if not inc or not inc.pinelabs_escrow:
         raise HTTPException(status_code=404, detail="Escrow record not found")
     
+    # Brute-force lockout check: max 5 failed attempts per incident
+    attempts = otp_failed_attempts.get(incident_id, 0)
+    if attempts >= 5:
+        raise HTTPException(
+            status_code=429, 
+            detail="Doorstep PIN locked: Too many failed verification attempts. Escrow frozen for security."
+        )
+
     escrow = inc.pinelabs_escrow
+    # Anti-Replay Defense: Block duplicate settlement if already released
+    if escrow.escrow_status == "RELEASED":
+        raise HTTPException(
+            status_code=409,
+            detail="Escrow has already been settled and released. Replay attempts blocked."
+        )
+
     result = PineLabsPaymentRail.verify_otp_and_release(
         escrow_id=escrow.escrow_id,
         entered_otp=entered_otp,
@@ -164,6 +182,7 @@ def verify_otp(incident_id: int, entered_otp: str, db: Session = Depends(get_db)
     )
 
     if result["success"]:
+        otp_failed_attempts[incident_id] = 0
         escrow.escrow_status = "RELEASED"
         escrow.otp_verified = True
         escrow.settlement_txn_id = result["settlement_txn_id"]
@@ -178,7 +197,47 @@ def verify_otp(incident_id: int, entered_otp: str, db: Session = Depends(get_db)
         db.commit()
         return result
     else:
-        raise HTTPException(status_code=400, detail="Invalid OTP code. Escrow remains locked.")
+        otp_failed_attempts[incident_id] = attempts + 1
+        remaining = 5 - otp_failed_attempts[incident_id]
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid OTP code. Escrow remains locked. ({remaining} attempts remaining before security lockout)"
+        )
+
+# 4b. Rail Actions: Reset Lockout & Escrow State (Admin / Testing)
+@app.post("/api/rails/pinelabs/reset-lockout/{incident_id}")
+def reset_otp_lockout(incident_id: int, reset_escrow: bool = False, db: Session = Depends(get_db)):
+    """Admin/Security endpoint to clear failed OTP attempts and optionally re-lock escrow for testing."""
+    otp_failed_attempts[incident_id] = 0
+    if reset_escrow:
+        inc = db.query(Incident).filter(Incident.id == incident_id).first()
+        if inc and inc.pinelabs_escrow:
+            inc.pinelabs_escrow.escrow_status = "LOCKED"
+            inc.pinelabs_escrow.otp_verified = False
+            inc.pinelabs_escrow.doorstep_otp = "7492"
+            inc.status = "PARTS_DELIVERED"
+            if inc.machine:
+                inc.machine.health_score = 14
+                inc.machine.status = "CRITICAL"
+                inc.machine.wear_metric_value = 920.0
+            db.commit()
+    return {"status": "SUCCESS", "message": f"Lockout cleared for incident {incident_id}"}
+
+# 5. Rail Actions: Delhivery JIT Parts Dispatch
+@app.post("/api/rails/delhivery/dispatch/{incident_id}")
+def dispatch_delhivery(incident_id: int, db: Session = Depends(get_db)):
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    
+    shipment_data = DelhiveryLogisticsRail.dispatch_spare_part(
+        item_name="Kent OEM Spun Sediment Cartridge + Carbon Filter Kit",
+        item_sku="KENT-SP-SED-01",
+        destination_pincode="122001"
+    )
+    inc.status = "PARTS_DISPATCHED"
+    db.commit()
+    return {"status": "SUCCESS", "shipment": shipment_data}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

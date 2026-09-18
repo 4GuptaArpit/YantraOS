@@ -104,9 +104,10 @@ export default function YantraOSDashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Simulation Stages: 1: MUD_SPIKE -> 2: GNANI_NEGOTIATED -> 3: GEOFENCE_ARRIVED -> 4: OTP_SETTLED
-  const [simStep, setSimStep] = useState<number>(2);
+  const [simStep, setSimStep] = useState<number>(1);
   const [otpInput, setOtpInput] = useState("7492");
   const [otpSuccess, setOtpSuccess] = useState(false);
+  const [otpError, setOtpError] = useState(false);
 
   // UI Navigation Tabs
   const [activeTab, setActiveTab] = useState<"SCHEMATIC" | "TELEMETRY" | "CONTRACTS">("SCHEMATIC");
@@ -171,41 +172,80 @@ export default function YantraOSDashboard() {
     setActiveSubtitleIndex(0);
   };
 
-  // Interactive Simulation Controls
+  // Interactive Simulation Controls & Toast State
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [activeToast, setActiveToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setActiveToast(msg);
+    setTimeout(() => setActiveToast(null), 3500);
+  };
+
   const triggerMudSpike = React.useCallback(() => {
+    setIsTransitioning(true);
     setSimStep(1);
     setOtpSuccess(false);
+    setOtpError(false);
     setMachines(prev => prev.map(m => m.id === 1 ? {
       ...m,
       health_score: 18,
       wear_metric_value: 940.0,
       status: "CRITICAL"
     } : m));
+    showToast("⚠️ INCIDENT DETECTED: TDS Inflow Spike (920 ppm) - DJB Mainline Rupture");
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
   const triggerNegotiate = React.useCallback(() => {
+    setIsTransitioning(true);
     setSimStep(2);
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play();
       setIsPlayingAudio(true);
     }
+    showToast("📞 GNANI VOICE RAIL: Autonomous Inbound Negotiation Locked for 3:30 PM");
+    // Also trigger backend call asynchronously if running
+    fetch("http://localhost:8000/api/rails/gnani/trigger-call/1", { method: "POST" }).catch(() => {});
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
   const triggerGeofenceArrival = React.useCallback(() => {
+    setIsTransitioning(true);
     setSimStep(3);
+    showToast("🚚 DELHIVERY LOGISTICS: OEM Cartridge Delivered at Tower B Gate");
+    fetch("http://localhost:8000/api/rails/delhivery/dispatch/1", { method: "POST" }).catch(() => {});
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
-  const triggerSettleEscrow = React.useCallback(() => {
+  const triggerSettleEscrow = React.useCallback((explicitOtp?: string) => {
+    setIsTransitioning(true);
     setSimStep(4);
     setOtpSuccess(true);
+    setOtpError(false);
+    setOtpInput("7492");
     setMachines(prev => prev.map(m => m.id === 1 ? {
       ...m,
       health_score: 98,
       wear_metric_value: 105.0,
       status: "NOMINAL"
     } : m));
+    showToast("🎉 SYSTEM RESTORED: ₹1,450 Escrow Released via Pine Labs. RO Health: 98%");
+    // Also trigger backend OTP settlement asynchronously
+    fetch("http://localhost:8000/api/rails/pinelabs/verify-otp/1?entered_otp=7492", { method: "POST" }).catch(() => {});
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
+
+  const handleVerifyOtp = (code?: string) => {
+    const codeToTest = (code !== undefined ? code : otpInput).trim();
+    if (codeToTest !== "7492") {
+      setOtpError(true);
+      showToast(`❌ PIN REJECTED: '${codeToTest}' invalid. Pine Labs Escrow remains locked.`);
+      setTimeout(() => setOtpError(false), 2500);
+      return;
+    }
+    triggerSettleEscrow();
+  };
 
   // Keyboard shortcut listener for judge demonstration
   useEffect(() => {
@@ -318,155 +358,574 @@ export default function YantraOSDashboard() {
       {/* MAIN SYSTEM WORKSPACE */}
       <main className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-5 space-y-6">
 
-        {/* 1. OPERATOR / JUDGE TACTICAL TIMELINE CONTROLLER */}
-        <section className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-4 relative overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#1b2332]">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-              <h2 className="text-xs font-mono font-bold tracking-wider text-slate-200 uppercase">
-                Autonomous Incident Director // Scenario: Municipal Muddy Water Inflow
-              </h2>
+        {/* TOAST NOTIFICATION SYSTEM */}
+        {activeToast && (
+          <div className="fixed top-16 right-6 z-50 animate-bounce bg-[#0d1624] border border-amber-500/80 text-amber-300 text-xs font-mono px-4 py-2.5 rounded-lg shadow-2xl flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span>{activeToast}</span>
+          </div>
+        )}
+
+        {/* 1. HERO: ACTIVE INCIDENT TELEMETRY STRIP (CRITICAL EVENT FOCUS) */}
+        <section className={`rounded-xl border p-5 lg:p-6 transition-all duration-300 relative overflow-hidden ${
+          simStep >= 4 
+            ? "bg-gradient-to-r from-[#0d1b14] via-[#0e171b] to-[#0c1322] border-emerald-500/50 shadow-lg shadow-emerald-950/20" 
+            : "bg-gradient-to-r from-[#1f0d11] via-[#14121b] to-[#0e131d] border-red-500/60 shadow-xl shadow-red-950/30"
+        }`}>
+          {/* Subtle status glow corner */}
+          <div className={`absolute -right-16 -top-16 w-32 h-32 rounded-full blur-3xl pointer-events-none ${simStep >= 4 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}></div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
+            <div className="lg:col-span-7 space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`px-2.5 py-1 rounded text-xs font-mono font-bold flex items-center gap-1.5 border ${
+                  simStep >= 4 
+                    ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-300" 
+                    : "bg-red-950/80 border-red-500/80 text-red-300 animate-pulse"
+                }`}>
+                  {simStep >= 4 ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                  {simStep >= 4 ? "SYSTEM STATUS: RESOLVED & NOMINAL" : "TELEMETRY BREACH: INCIDENT IN PROGRESS"}
+                </span>
+                <span className="text-xs font-mono text-slate-300">INCIDENT: INC-2026-DEL-RO-402</span>
+                <span className="text-xs font-mono text-slate-500">|</span>
+                <span className="text-xs font-mono text-amber-400">AMC STATUS: 0 FREE VISITS (EXHAUSTED)</span>
+              </div>
+
+              <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                RO Sediment Pre-Filter Occlusion <span className="text-slate-400 text-lg font-normal block sm:inline sm:text-2xl">(Delhi Jal Board Turbidity Surge)</span>
+              </h1>
+              
+              <p className="text-xs sm:text-sm text-slate-300 font-sans leading-relaxed max-w-3xl">
+                Municipal mainline rupture in Sector 43 spiked incoming particulate matter to <b>920 ppm</b>. YantraOS detected hydraulic collapse (15.0 L/hr down to 1.8 L/hr). Recognizing the AMC avoidance trap, YantraOS autonomously dispatched OEM kit <code className="font-mono text-cyan-300 bg-cyan-950/40 px-1 py-0.5 rounded">#KENT-SP-SED-01</code> via Delhivery, locked technician Ramesh for 3:30 PM via Gnani.ai, and pre-authorized ₹1,450 via Pine Labs escrow under Lease Clause 14B.
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-              <span>KEYBOARD HOTKEYS:</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161c28] border border-[#27334a] text-slate-300">1</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161c28] border border-[#27334a] text-slate-300">2</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161c28] border border-[#27334a] text-slate-300">3</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161c28] border border-[#27334a] text-slate-300">4</kbd>
-              <span className="text-slate-600">|</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161c28] border border-[#27334a] text-slate-300">SPACE</kbd>
-              <span>(PLAY CALL)</span>
+
+            {/* Diagnostic Metrics Matrix */}
+            <div className="lg:col-span-5 grid grid-cols-3 gap-3 font-mono">
+              <div className="p-3.5 rounded-lg bg-[#0e121a]/90 border border-[#202a3d] text-center backdrop-blur-sm">
+                <span className="text-[10px] text-slate-400 uppercase block font-semibold">Inflow TDS</span>
+                <span className={`text-xl lg:text-2xl font-black ${simStep >= 4 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {simStep >= 4 ? "105" : "920"} <span className="text-xs font-normal text-slate-400">PPM</span>
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">NOMINAL: &lt;300</span>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-[#0e121a]/90 border border-[#202a3d] text-center backdrop-blur-sm">
+                <span className="text-[10px] text-slate-400 uppercase block font-semibold">Flow Rate</span>
+                <span className={`text-xl lg:text-2xl font-black ${simStep >= 4 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {simStep >= 4 ? "14.8" : "1.8"} <span className="text-xs font-normal text-slate-400">L/HR</span>
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">{simStep >= 4 ? "+722% RESTORED" : "-88% LOSS"}</span>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-[#0e121a]/90 border border-[#202a3d] text-center backdrop-blur-sm">
+                <span className="text-[10px] text-slate-400 uppercase block font-semibold">Escrow Split</span>
+                <span className="text-xl lg:text-2xl font-black text-indigo-300">
+                  ₹1,450
+                </span>
+                <span className="text-[10px] text-emerald-400 block mt-0.5 font-bold">100% LANDLORD</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. OPERATOR / JUDGE TACTICAL TIMELINE CONTROLLER */}
+        <section className={`rounded-xl bg-[#0e121a] border ${isTransitioning ? 'border-amber-400 shadow-lg' : 'border-[#1e2739]'} p-4 lg:p-5 relative transition-all`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 border-b border-[#1b2332]">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <div>
+                <h2 className="text-sm font-mono font-bold text-white tracking-wide uppercase">
+                  Simulation Director // Scenario: DJB Muddy Water Inflow
+                </h2>
+                <p className="text-[11px] font-mono text-slate-400">Click a stage or press hotkey to demonstrate autonomous machine recovery lifecycle</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-mono bg-[#141924] px-3 py-1.5 rounded-lg border border-[#222d42]">
+              <span className="text-amber-400 font-bold">PRESS KEYS:</span>
+              <kbd className="px-2 py-0.5 rounded bg-[#1e2638] border border-[#2e3b54] text-white font-bold">1</kbd>
+              <span>→</span>
+              <kbd className="px-2 py-0.5 rounded bg-[#1e2638] border border-[#2e3b54] text-white font-bold">2</kbd>
+              <span>→</span>
+              <kbd className="px-2 py-0.5 rounded bg-[#1e2638] border border-[#2e3b54] text-white font-bold">3</kbd>
+              <span>→</span>
+              <kbd className="px-2 py-0.5 rounded bg-[#1e2638] border border-[#2e3b54] text-white font-bold">4</kbd>
+              <span className="text-slate-500">|</span>
+              <kbd className="px-2 py-0.5 rounded bg-[#1e2638] border border-[#2e3b54] text-cyan-300 font-bold">SPACE</kbd>
+              <span className="text-slate-400">AUDIO</span>
             </div>
           </div>
 
-          {/* Timeline Sequence Switchboard */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3">
+          {/* Connected Stepper Flow Switchboard */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
             
             {/* Step 1 */}
             <button
               onClick={triggerMudSpike}
-              className={`p-3 rounded text-left border font-mono transition relative ${
+              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
                 simStep === 1
-                  ? "bg-[#211114] border-red-500/80 text-white shadow-sm"
-                  : "bg-[#111622] border-[#1f293b] hover:border-[#2f3d57] text-slate-400"
+                  ? "bg-[#241216] border-red-500 text-white ring-2 ring-red-500/30 shadow-lg shadow-red-950/40"
+                  : simStep > 1
+                  ? "bg-[#111722] border-[#223046] text-slate-300"
+                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={simStep === 1 ? "text-red-400 font-bold" : "text-slate-500"}>STAGE 01 · T-00:00</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    simStep === 1 ? 'bg-red-500 text-white' : simStep > 1 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                  }`}>
+                    {simStep > 1 ? "✓" : "1"}
+                  </span>
+                  <span className={simStep === 1 ? "text-red-400" : "text-slate-400"}>STAGE 01</span>
+                </span>
+                <span className="text-[10px] text-slate-400">T-00:00</span>
               </div>
-              <p className="text-xs font-bold text-white tracking-tight">Municipal TDS Inflow Spike</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Turbidity 920 ppm · Filter choked</p>
+              <p className="text-sm font-bold text-white tracking-tight">Municipal TDS Surge</p>
+              <p className="text-xs text-slate-300 mt-1">920 ppm breach · Pre-filter choked</p>
             </button>
 
             {/* Step 2 */}
             <button
               onClick={triggerNegotiate}
-              className={`p-3 rounded text-left border font-mono transition relative ${
+              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
                 simStep === 2
-                  ? "bg-[#102419] border-emerald-500/80 text-white shadow-sm"
-                  : "bg-[#111622] border-[#1f293b] hover:border-[#2f3d57] text-slate-400"
+                  ? "bg-[#102419] border-emerald-500 text-white ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-950/40"
+                  : simStep > 2
+                  ? "bg-[#111722] border-[#223046] text-slate-300"
+                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={simStep === 2 ? "text-emerald-400 font-bold" : "text-slate-500"}>STAGE 02 · T+00:04</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    simStep === 2 ? 'bg-emerald-500 text-black' : simStep > 2 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                  }`}>
+                    {simStep > 2 ? "✓" : "2"}
+                  </span>
+                  <span className={simStep === 2 ? "text-emerald-400" : "text-slate-400"}>STAGE 02</span>
+                </span>
+                <span className="text-[10px] text-slate-400">T+00:04</span>
               </div>
-              <p className="text-xs font-bold text-white tracking-tight">Gnani Voice Interceptor</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Locks 3:30 PM slot in Hinglish</p>
+              <p className="text-sm font-bold text-white tracking-tight">Gnani Voice Interceptor</p>
+              <p className="text-xs text-slate-300 mt-1">Locks 3:30 PM slot in Hinglish</p>
             </button>
 
             {/* Step 3 */}
             <button
               onClick={triggerGeofenceArrival}
-              className={`p-3 rounded text-left border font-mono transition relative ${
+              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
                 simStep === 3
-                  ? "bg-[#101e2b] border-cyan-500/80 text-white shadow-sm"
-                  : "bg-[#111622] border-[#1f293b] hover:border-[#2f3d57] text-slate-400"
+                  ? "bg-[#10212f] border-cyan-500 text-white ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-950/40"
+                  : simStep > 3
+                  ? "bg-[#111722] border-[#223046] text-slate-300"
+                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={simStep === 3 ? "text-cyan-400 font-bold" : "text-slate-500"}>STAGE 03 · T+00:18</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    simStep === 3 ? 'bg-cyan-400 text-black' : simStep > 3 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                  }`}>
+                    {simStep > 3 ? "✓" : "3"}
+                  </span>
+                  <span className={simStep === 3 ? "text-cyan-400" : "text-slate-400"}>STAGE 03</span>
+                </span>
+                <span className="text-[10px] text-slate-400">T+00:18</span>
               </div>
-              <p className="text-xs font-bold text-white tracking-tight">Delhivery JIT Parts Arrival</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">OEM cartridge delivered at gate</p>
+              <p className="text-sm font-bold text-white tracking-tight">Delhivery JIT Parts Arrival</p>
+              <p className="text-xs text-slate-300 mt-1">OEM cartridge delivered at gate</p>
             </button>
 
             {/* Step 4 */}
             <button
               onClick={triggerSettleEscrow}
-              className={`p-3 rounded text-left border font-mono transition relative ${
+              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
                 simStep === 4
-                  ? "bg-[#19152a] border-indigo-500/80 text-white shadow-sm"
-                  : "bg-[#111622] border-[#1f293b] hover:border-[#2f3d57] text-slate-400"
+                  ? "bg-[#1c1730] border-indigo-500 text-white ring-2 ring-indigo-500/30 shadow-lg shadow-indigo-950/40"
+                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={simStep === 4 ? "text-indigo-400 font-bold" : "text-slate-500"}>STAGE 04 · T+00:45</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    simStep === 4 ? 'bg-indigo-400 text-black' : 'bg-[#222c3d] text-slate-400'
+                  }`}>
+                    4
+                  </span>
+                  <span className={simStep === 4 ? "text-indigo-400" : "text-slate-400"}>STAGE 04</span>
+                </span>
+                <span className="text-[10px] text-slate-400">T+00:45</span>
               </div>
-              <p className="text-xs font-bold text-white tracking-tight">Pine Labs Escrow Settlement</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">OTP release · ₹1,450 to Landlord</p>
+              <p className="text-sm font-bold text-white tracking-tight">Pine Labs Escrow Settle</p>
+              <p className="text-xs text-slate-300 mt-1">OTP release · ₹1,450 to Landlord</p>
             </button>
 
           </div>
         </section>
 
-        {/* 2. ACTIVE INCIDENT TELEMETRY STRIP */}
-        <section className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-4 lg:p-5">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            
-            <div className="lg:col-span-7 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-red-950/60 border border-red-500/50 text-red-400 text-[10px] font-mono font-bold flex items-center gap-1.5">
-                  <ShieldAlert className="w-3 h-3" />
-                  TELEMETRY_ANOMALY: THRESHOLD_BREACHED
-                </span>
-                <span className="text-xs font-mono text-slate-400">INCIDENT ID: INC-2026-DEL-RO-402</span>
-                <span className="text-xs font-mono text-slate-500">|</span>
-                <span className="text-xs font-mono text-amber-400">AMC QUOTA: 0 VISITS (EXHAUSTED)</span>
+        {/* 3. THE THREE PARTNER RAILS SHOWCASE */}
+        <section className="space-y-3.5">
+          <div className="flex items-center justify-between border-l-4 border-emerald-500 pl-3 py-0.5">
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <h2 className="text-sm font-mono font-bold tracking-wider text-white uppercase">
+                The Three Partner Rails // Ground Reality Execution Engine
+              </h2>
+            </div>
+            <span className="hidden sm:inline text-xs font-mono text-emerald-400 bg-emerald-950/50 px-2.5 py-1 rounded border border-emerald-800">
+              SYNCHRONIZED DISPATCH · ZERO AT-HOME HOSTAGE TIME
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+            {/* RAIL 1: GNANI.AI VOICE RAIL */}
+            <div className={`rounded-xl bg-[#0e121a] border ${simStep === 2 ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-950/40' : 'border-[#1e2739]'} p-4 flex flex-col justify-between space-y-4 transition-all`}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm">
+                      <PhoneCall className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white font-mono">1. GNANI.AI VOICE RAIL</h3>
+                      <p className="text-[10px] text-slate-400">Vernacular Technician Negotiator</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-bold">
+                    60s INDIC AUDIO
+                  </span>
+                </div>
+
+                {/* Call Controller & Audio Player */}
+                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-mono font-bold text-white">Technician Ramesh (Kent Certified)</p>
+                      <p className="text-[10px] font-mono text-slate-400">
+                        Swara (Bot) ↔ Madhur (Tech) · Hinglish [{Math.floor(audioCurrentTime)}s / 60s]
+                      </p>
+                    </div>
+                    <button
+                      onClick={toggleAudio}
+                      className="p-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-950"
+                      title="Play/Pause Conversation Audio"
+                    >
+                      {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      <span className="text-[11px] font-bold">{isPlayingAudio ? "PAUSE" : "LISTEN"}</span>
+                    </button>
+                  </div>
+
+                  {/* Dual Channel Acoustic Oscilloscope Bars */}
+                  <div className="flex items-center gap-1 h-8 px-1.5 bg-[#0b0e14] rounded border border-[#171e2c]">
+                    {[45, 80, 30, 95, 60, 40, 85, 100, 35, 75, 90, 50, 95, 65, 40, 85, 30, 90, 55, 75, 45, 70, 85, 50].map((h, i) => (
+                      <div 
+                        key={i} 
+                        className={`flex-1 rounded-sm transition-all ${
+                          isPlayingAudio 
+                            ? 'bg-emerald-400' 
+                            : 'bg-slate-800'
+                        }`}
+                        style={{ 
+                          height: isPlayingAudio ? `${h}%` : '15%',
+                          animation: isPlayingAudio ? `audioWave ${0.5 + (i % 5) * 0.15}s ease-in-out infinite alternate` : 'none',
+                          animationDelay: `${(i * 0.05).toFixed(2)}s`
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Synchronized Telephony Transcript */}
+                  <div className="rounded bg-[#0e131d] border border-[#1c2436] p-3 text-xs space-y-1.5 min-h-[90px]">
+                    <div className="flex items-center justify-between font-mono text-[10px]">
+                      <span className="font-bold text-emerald-400">
+                        {subtitles[activeSubtitleIndex].speaker}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded bg-[#182030] text-cyan-300">
+                        [{subtitles[activeSubtitleIndex].intent}]
+                      </span>
+                    </div>
+                    <p className="text-slate-200 font-sans text-xs">
+                      &ldquo;{subtitles[activeSubtitleIndex].text}&rdquo;
+                    </p>
+                    <p className="text-slate-400 font-sans text-[11px] italic">
+                      {subtitles[activeSubtitleIndex].translation}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white">
-                RO Sediment Pre-Filter Occlusion (Delhi Jal Board Turbidity Surge)
-              </h1>
-              <p className="text-xs text-slate-300 font-sans leading-relaxed max-w-3xl">
-                Municipal mainline rupture in Sector 43 spiked incoming particulate matter to <b>920 ppm</b>. YantraOS detected flow rate collapse from 15.0 L/hr down to 1.8 L/hr. Recognizing the technician avoidance trap (0 free AMC visits), YantraOS bypassed the brand warranty desk, dispatched OEM replacement kit <code className="font-mono text-cyan-300">#KENT-SP-SED-01</code> via Delhivery, locked technician Ramesh for 3:30 PM via Gnani.ai, and pre-authorized ₹1,450 through Pine Labs escrow under Lease Clause 14B.
-              </p>
+
+              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span>LOCKED VISIT: <b className="text-white">3:30 PM (FIRM)</b></span>
+                <span className="text-emerald-400 font-bold">✓ ZERO WAITING HOSTAGE</span>
+              </div>
             </div>
 
-            {/* Diagnostic Metrics Matrix */}
-            <div className="lg:col-span-5 grid grid-cols-3 gap-2.5 font-mono">
-              <div className="p-3 rounded bg-[#121620] border border-[#1e2638] text-center">
-                <span className="text-[10px] text-slate-400 uppercase block">Inflow TDS</span>
-                <span className={`text-base lg:text-lg font-bold ${simStep >= 4 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {simStep >= 4 ? "105" : "920"} <span className="text-[10px] font-normal text-slate-400">PPM</span>
-                </span>
-                <span className="text-[9px] text-slate-500 block mt-0.5">NOMINAL: &lt;300</span>
+            {/* RAIL 2: DELHIVERY LOGISTICS RAIL */}
+            <div className={`rounded-xl bg-[#0e121a] border ${simStep === 3 ? 'border-cyan-500 ring-2 ring-cyan-500/20 shadow-lg shadow-cyan-950/40' : 'border-[#1e2739]'} p-4 flex flex-col justify-between space-y-4 transition-all`}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-sm">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white font-mono">2. DELHIVERY LOGISTICS RAIL</h3>
+                      <p className="text-[10px] text-slate-400">JIT Genuine Spare Parts Dispatch</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold">
+                    AWB: DEL_88291039
+                  </span>
+                </div>
+
+                {/* Waybill Telemetry Card */}
+                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs font-mono font-bold text-white">Kent Spun Sediment + Carbon Kit</p>
+                      <p className="text-[10px] font-mono text-slate-400">SKU: KENT-SP-SED-01 · Invoiced: ₹750</p>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                      simStep >= 3 
+                        ? 'bg-emerald-950 border-emerald-500/50 text-emerald-300' 
+                        : 'bg-cyan-950 border-cyan-500/50 text-cyan-300'
+                    }`}>
+                      {simStep >= 3 ? "DELIVERED AT GATE" : "OUT FOR DELIVERY"}
+                    </span>
+                  </div>
+
+                  {/* Waypoint Tracking Trajectory */}
+                  <div className="space-y-2 text-xs font-mono">
+                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                      <span>09:15 AM - Dispatched: OEM Gurugram Hub</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                      <span>10:30 AM - Sector 18 Mother Sorting Center</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cyan-300 font-medium text-[11px]">
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin flex-shrink-0" />
+                      <span>{simStep >= 3 ? "02:15 PM - Delivered at Tower B Security" : "01:10 PM - Courier Rider Vikas M. (1.4 km away)"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                      <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>ETA: 2:15 PM (Precedes 3:30 PM Technician Visit)</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3 rounded bg-[#121620] border border-[#1e2638] text-center">
-                <span className="text-[10px] text-slate-400 uppercase block">Flow Rate</span>
-                <span className={`text-base lg:text-lg font-bold ${simStep >= 4 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {simStep >= 4 ? "14.8" : "1.8"} <span className="text-[10px] font-normal text-slate-400">L/HR</span>
-                </span>
-                <span className="text-[9px] text-slate-500 block mt-0.5">-88% LOSS</span>
+              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span>ANTI-SUBSTITUTION: <b className="text-white">OEM SEAL #8821</b></span>
+                <span className="text-cyan-400 font-bold">✓ GENUINE PART ASSURED</span>
+              </div>
+            </div>
+
+            {/* RAIL 3: PINE LABS ESCROW & TENANCY RAIL */}
+            <div className={`rounded-xl bg-[#0e121a] border ${simStep === 4 ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-950/40' : 'border-[#1e2739]'} p-4 flex flex-col justify-between space-y-4 transition-all`}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white font-mono">3. PINE LABS ESCROW RAIL</h3>
+                      <p className="text-[10px] text-slate-400">Plural Pre-Auth & Tenancy Split</p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
+                    otpSuccess 
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-300' 
+                      : 'bg-indigo-950 border-indigo-800 text-indigo-300'
+                  }`}>
+                    {otpSuccess ? "SETTLED & RELEASED" : "ESCROW LOCKED (₹1,450)"}
+                  </span>
+                </div>
+
+                {/* Escrow Arbitration Box */}
+                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-2.5 font-mono text-xs">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-400">Total Approved Repair:</span>
+                    <span className="text-white font-bold">₹1,450 (Parts ₹750 + Labor ₹700)</span>
+                  </div>
+
+                  <div className="p-2.5 rounded bg-[#111522] border border-[#1f263c] space-y-1 text-[11px]">
+                    <span className="text-indigo-300 font-bold block">Lease Split (Clause 14B):</span>
+                    <div className="flex justify-between text-slate-300">
+                      <span>Tenant (Arpit Sharma):</span>
+                      <span className="text-emerald-400 font-bold">₹0</span>
+                    </div>
+                    <div className="flex justify-between text-slate-300">
+                      <span>Landlord (Vikas Khanna):</span>
+                      <span className="text-indigo-300 font-bold">₹1,450 (Pre-Authorized)</span>
+                    </div>
+                  </div>
+
+                  {/* Doorstep OTP Release Form */}
+                  <div className="pt-1">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-1">
+                      <KeyRound className="w-3 h-3 text-indigo-400" />
+                      DOORSTEP DYNAMIC PIN HANDSHAKE:
+                    </span>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={otpInput}
+                        onChange={(e) => {
+                          setOtpInput(e.target.value);
+                          if (otpError) setOtpError(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !otpSuccess) {
+                            handleVerifyOtp();
+                          }
+                        }}
+                        disabled={otpSuccess}
+                        className={`w-full px-2.5 py-1.5 rounded bg-[#121620] border text-xs text-white font-mono tracking-widest text-center focus:outline-none disabled:opacity-50 transition-all ${
+                          otpError 
+                            ? "border-red-500 ring-2 ring-red-500/40 bg-red-950/20 text-red-200 animate-pulse" 
+                            : otpSuccess 
+                            ? "border-emerald-500/60 ring-2 ring-emerald-500/30 text-emerald-400"
+                            : "border-[#232d42] focus:border-indigo-500"
+                        }`}
+                        placeholder="Enter 4-digit PIN (Try 7492)"
+                      />
+                      <button
+                        onClick={() => handleVerifyOtp()}
+                        disabled={otpSuccess}
+                        className={`px-3 py-1.5 rounded text-xs font-bold text-white transition whitespace-nowrap ${
+                          otpSuccess 
+                            ? "bg-emerald-600 cursor-default" 
+                            : otpError 
+                            ? "bg-red-600 hover:bg-red-500" 
+                            : "bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1b2130]"
+                        }`}
+                      >
+                        {otpSuccess ? "Released ✓" : otpError ? "Retry PIN" : "Verify PIN"}
+                      </button>
+                    </div>
+                    {otpError && (
+                      <p className="text-[10px] text-red-400 font-mono mt-1 flex items-center gap-1">
+                        <span>⚠️ Cryptographic mismatch. Doorstep Escrow rejected.</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3 rounded bg-[#121620] border border-[#1e2638] text-center">
-                <span className="text-[10px] text-slate-400 uppercase block">Escrow Split</span>
-                <span className="text-base lg:text-lg font-bold text-indigo-300">
-                  ₹1,450
-                </span>
-                <span className="text-[9px] text-emerald-400 block mt-0.5">100% LANDLORD</span>
+              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span>GEOFENCE: <b className="text-white">38M FROM DOORSTEP</b></span>
+                <span className="text-indigo-400 font-bold">✓ CRYPTOGRAPHIC RELEASE</span>
               </div>
             </div>
 
           </div>
         </section>
 
-        {/* 3. HARDWARE DEEP-DIVE: HYDRAULIC SCHEMATIC & WEAR CURVE ENGINE */}
-        <section className="rounded-lg bg-[#0e121a] border border-[#1e2739] overflow-hidden">
+        {/* 4. HOUSEHOLD DIGITAL MACHINE TWIN FLEET REGISTRY */}
+        <section className="space-y-3.5">
+          <div className="flex items-center justify-between border-l-4 border-cyan-500 pl-3 py-0.5">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              <h2 className="text-sm font-mono font-bold tracking-wider text-white uppercase">
+                Household Machine Twin Fleet Registry // 3 Synchronized Appliances
+              </h2>
+            </div>
+            <span className="text-xs font-mono text-cyan-400 bg-cyan-950/50 px-2.5 py-1 rounded border border-cyan-800">
+              GODREJ WOODS TOWER B · 402
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {machines.map((machine) => (
+              <div 
+                key={machine.id}
+                className={`rounded-xl bg-[#0e121a] border p-4 space-y-3 font-mono transition-all ${
+                  machine.status === "CRITICAL"
+                    ? "border-red-500/80 shadow-lg shadow-red-950/20 ring-1 ring-red-500/30"
+                    : machine.status === "WARNING"
+                    ? "border-amber-500/50"
+                    : "border-[#1e2739] hover:border-[#2f3d57]"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-slate-500 block uppercase font-semibold">{machine.location_room}</span>
+                    <h3 className="text-sm font-bold text-white font-sans tracking-tight">{machine.name}</h3>
+                    <p className="text-[11px] text-slate-400">{machine.model_number} · SN: {machine.serial_number}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    machine.status === "CRITICAL"
+                      ? "bg-red-950 border-red-500 text-red-300"
+                      : machine.status === "WARNING"
+                      ? "bg-amber-950 border-amber-500 text-amber-300"
+                      : "bg-emerald-950 border-emerald-500 text-emerald-300"
+                  }`}>
+                    {machine.status}
+                  </span>
+                </div>
+
+                {/* Health Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Machine Health Score:</span>
+                    <span className={`font-bold ${machine.health_score > 70 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {machine.health_score}%
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[#161c28] overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        machine.health_score > 70 ? 'bg-emerald-500' : machine.health_score > 40 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${machine.health_score}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Machine Details Box */}
+                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 text-[11px] space-y-1 text-slate-300">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Metric Tracked:</span>
+                    <span className="text-white">{machine.wear_metric_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Current Value:</span>
+                    <span className={machine.wear_metric_value > machine.wear_threshold ? "text-red-400 font-bold" : "text-emerald-400 font-bold"}>
+                      {machine.wear_metric_value} {machine.wear_unit} (Threshold: {machine.wear_threshold})
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">AMC Status:</span>
+                    <span className={machine.amc_free_visits_remaining === 0 ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"}>
+                      {machine.has_active_amc ? `Active (${machine.amc_free_visits_remaining} visits left)` : "Expired"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Rated Power:</span>
+                    <span className="text-slate-300">{machine.power_draw_watts}W · MFG: {machine.mfg_date}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Sensors: Active Telemetry</span>
+                  <span className="text-cyan-400 font-semibold">Polling: 10s</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. HARDWARE DEEP-DIVE: HYDRAULIC SCHEMATIC & WEAR CURVE ENGINE */}
+        <section className="rounded-xl bg-[#0e121a] border border-[#1e2739] overflow-hidden">
           
           {/* Section Sub-Navigation Tabs */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1b2332] bg-[#0c1017]">
@@ -537,8 +996,17 @@ export default function YantraOSDashboard() {
                       <span className="text-[10px] font-mono text-red-400 mt-1 block">920 ppm TDS</span>
                     </div>
 
-                    <div className="h-0.5 flex-1 bg-red-500/60 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t border-r border-red-400 rotate-45"></div>
+                    {/* Dynamic Flow Conduit 1 */}
+                    <div className="h-4 flex-1 relative flex items-center px-1">
+                      <svg className="w-full h-3 overflow-visible">
+                        <line 
+                          x1="0" y1="6" x2="100%" y2="6" 
+                          stroke={simStep >= 4 ? "#10b981" : "#ef4444"} 
+                          strokeWidth="2.5" 
+                          className={simStep >= 4 ? "animate-flow" : "animate-flow-fast"}
+                        />
+                      </svg>
+                      <div className={`absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t-2 border-r-2 ${simStep >= 4 ? 'border-emerald-400' : 'border-red-400'} rotate-45`}></div>
                     </div>
 
                     {/* Stage 2: Spun Sediment Pre-Filter (CHOKED) */}
@@ -546,20 +1014,33 @@ export default function YantraOSDashboard() {
                       onClick={() => setSelectedSchematicPart("SEDIMENT_FILTER")}
                       className={`cursor-pointer p-3 rounded border text-center transition w-44 relative ${
                         selectedSchematicPart === "SEDIMENT_FILTER"
-                          ? "bg-[#251014] border-red-500 text-white shadow-lg shadow-red-950/50"
-                          : "bg-[#180e12] border-red-900/80 text-red-300 hover:border-red-600"
+                          ? simStep >= 4
+                            ? "bg-[#0f241a] border-emerald-500 text-white shadow-lg shadow-emerald-950/50"
+                            : "bg-[#251014] border-red-500 text-white shadow-lg shadow-red-950/50"
+                          : simStep >= 4
+                            ? "bg-[#0b1a13] border-emerald-900/80 text-emerald-300 hover:border-emerald-600"
+                            : "bg-[#180e12] border-red-900/80 text-red-300 hover:border-red-600"
                       }`}
                     >
-                      <span className="text-[9px] font-mono text-red-400 font-bold block flex items-center justify-center gap-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        {simStep >= 4 ? "REPLACED (NEW)" : "CHOKED (98%)"}
+                      <span className={`text-[9px] font-mono font-bold block flex items-center justify-center gap-1 ${simStep >= 4 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {simStep >= 4 ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <AlertTriangle className="w-3 h-3 text-red-400" />}
+                        {simStep >= 4 ? "REPLACED (NEW OEM)" : "CHOKED (98%)"}
                       </span>
                       <p className="text-xs font-bold mt-1">Spun Sediment 5μm</p>
                       <span className="text-[10px] font-mono text-slate-400 mt-1 block">SKU: KENT-SP-SED-01</span>
                     </div>
 
-                    <div className="h-0.5 flex-1 bg-amber-500/40 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t border-r border-amber-400 rotate-45"></div>
+                    {/* Dynamic Flow Conduit 2 */}
+                    <div className="h-4 flex-1 relative flex items-center px-1">
+                      <svg className="w-full h-3 overflow-visible">
+                        <line 
+                          x1="0" y1="6" x2="100%" y2="6" 
+                          stroke={simStep >= 4 ? "#10b981" : "#f59e0b"} 
+                          strokeWidth="2.5" 
+                          className="animate-flow"
+                        />
+                      </svg>
+                      <div className={`absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t-2 border-r-2 ${simStep >= 4 ? 'border-emerald-400' : 'border-amber-400'} rotate-45`}></div>
                     </div>
 
                     {/* Stage 3: Carbon Block */}
@@ -576,8 +1057,17 @@ export default function YantraOSDashboard() {
                       <span className="text-[10px] font-mono text-amber-400 mt-1 block">Chlorine: 0.1ppm</span>
                     </div>
 
-                    <div className="h-0.5 flex-1 bg-blue-500/40 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t border-r border-blue-400 rotate-45"></div>
+                    {/* Dynamic Flow Conduit 3 */}
+                    <div className="h-4 flex-1 relative flex items-center px-1">
+                      <svg className="w-full h-3 overflow-visible">
+                        <line 
+                          x1="0" y1="6" x2="100%" y2="6" 
+                          stroke="#06b6d4" 
+                          strokeWidth="2.5" 
+                          className="animate-flow"
+                        />
+                      </svg>
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t-2 border-r-2 border-cyan-400 rotate-45"></div>
                     </div>
 
                     {/* Stage 4: Booster Pump */}
@@ -594,8 +1084,17 @@ export default function YantraOSDashboard() {
                       <span className="text-[10px] font-mono text-emerald-400 mt-1 block">Duty: 85%</span>
                     </div>
 
-                    <div className="h-0.5 flex-1 bg-blue-500/40 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t border-r border-blue-400 rotate-45"></div>
+                    {/* Dynamic Flow Conduit 4 */}
+                    <div className="h-4 flex-1 relative flex items-center px-1">
+                      <svg className="w-full h-3 overflow-visible">
+                        <line 
+                          x1="0" y1="6" x2="100%" y2="6" 
+                          stroke="#06b6d4" 
+                          strokeWidth="2.5" 
+                          className="animate-flow"
+                        />
+                      </svg>
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t-2 border-r-2 border-cyan-400 rotate-45"></div>
                     </div>
 
                     {/* Stage 5: RO Membrane */}
@@ -612,8 +1111,17 @@ export default function YantraOSDashboard() {
                       <span className="text-[10px] font-mono text-emerald-400 mt-1 block">Rejection: 96%</span>
                     </div>
 
-                    <div className="h-0.5 flex-1 bg-emerald-500/40 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t border-r border-emerald-400 rotate-45"></div>
+                    {/* Dynamic Flow Conduit 5 */}
+                    <div className="h-4 flex-1 relative flex items-center px-1">
+                      <svg className="w-full h-3 overflow-visible">
+                        <line 
+                          x1="0" y1="6" x2="100%" y2="6" 
+                          stroke="#10b981" 
+                          strokeWidth="2.5" 
+                          className="animate-flow"
+                        />
+                      </svg>
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-t-2 border-r-2 border-emerald-400 rotate-45"></div>
                     </div>
 
                     {/* Stage 6: Pure Water Tank */}
@@ -773,329 +1281,6 @@ export default function YantraOSDashboard() {
           </div>
         </section>
 
-        {/* 4. THE THREE PARTNER RAILS SHOWCASE */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-xs font-mono font-bold tracking-wider text-slate-200 uppercase">
-                The Three Partner Rails // Operational Ground Reality Engine
-              </h2>
-            </div>
-            <span className="text-[11px] font-mono text-slate-400">
-              SYNCHRONIZED DISPATCH · ZERO AT-HOME HOSTAGE TIME
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-            {/* RAIL 1: GNANI.AI VOICE RAIL */}
-            <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-4 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                      <PhoneCall className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-white font-mono">1. GNANI.AI VOICE RAIL</h3>
-                      <p className="text-[10px] text-slate-400">Vernacular Technician Negotiator</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                    REAL AUDIO 60s
-                  </span>
-                </div>
-
-                {/* Call Controller & Audio Player */}
-                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-mono font-bold text-white">Technician Ramesh (Kent Certified)</p>
-                      <p className="text-[10px] font-mono text-slate-400">
-                        Swara (Bot) ↔ Madhur (Tech) · Hinglish [{Math.floor(audioCurrentTime)}s / 60s]
-                      </p>
-                    </div>
-                    <button
-                      onClick={toggleAudio}
-                      className="p-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-950"
-                      title="Play/Pause Conversation Audio"
-                    >
-                      {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      <span className="text-[11px] font-bold">{isPlayingAudio ? "PAUSE" : "LISTEN"}</span>
-                    </button>
-                  </div>
-
-                  {/* Dual Channel Acoustic Oscilloscope Bars */}
-                  <div className="flex items-center gap-1 h-7 px-1 bg-[#0b0e14] rounded border border-[#171e2c]">
-                    {[40, 70, 30, 90, 60, 45, 80, 100, 35, 75, 85, 50, 95, 60, 40, 80, 30, 90, 55, 70, 40, 65, 85, 45].map((h, i) => (
-                      <div 
-                        key={i} 
-                        className={`flex-1 rounded-sm transition-all duration-150 ${isPlayingAudio ? 'bg-emerald-400' : 'bg-slate-800'}`}
-                        style={{ height: isPlayingAudio ? `${Math.max(15, (h * (i % 3 + 1)) % 100)}%` : '15%' }}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Synchronized Telephony Transcript */}
-                  <div className="rounded bg-[#0e131d] border border-[#1c2436] p-3 text-xs space-y-1.5 min-h-[90px]">
-                    <div className="flex items-center justify-between font-mono text-[10px]">
-                      <span className="font-bold text-emerald-400">
-                        {subtitles[activeSubtitleIndex].speaker}
-                      </span>
-                      <span className="px-1.5 py-0.2 rounded bg-[#182030] text-cyan-300">
-                        [{subtitles[activeSubtitleIndex].intent}]
-                      </span>
-                    </div>
-                    <p className="text-slate-200 font-sans text-xs">
-                      &ldquo;{subtitles[activeSubtitleIndex].text}&rdquo;
-                    </p>
-                    <p className="text-slate-400 font-sans text-[11px] italic">
-                      {subtitles[activeSubtitleIndex].translation}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span>LOCKED VISIT: <b className="text-white">3:30 PM (FIRM)</b></span>
-                <span className="text-emerald-400 font-bold">✓ ZERO WAITING HOSTAGE</span>
-              </div>
-            </div>
-
-            {/* RAIL 2: DELHIVERY LOGISTICS RAIL */}
-            <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-4 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                      <Truck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-white font-mono">2. DELHIVERY LOGISTICS RAIL</h3>
-                      <p className="text-[10px] text-slate-400">JIT Genuine Spare Parts Dispatch</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300">
-                    AWB: DEL_88291039
-                  </span>
-                </div>
-
-                {/* Waybill Telemetry Card */}
-                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-mono font-bold text-white">Kent Spun Sediment + Carbon Kit</p>
-                      <p className="text-[10px] font-mono text-slate-400">SKU: KENT-SP-SED-01 · Invoiced: ₹750</p>
-                    </div>
-                    <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded border ${
-                      simStep >= 3 
-                        ? 'bg-emerald-950 border-emerald-500/50 text-emerald-300' 
-                        : 'bg-cyan-950 border-cyan-500/50 text-cyan-300'
-                    }`}>
-                      {simStep >= 3 ? "DELIVERED AT GATE" : "OUT FOR DELIVERY"}
-                    </span>
-                  </div>
-
-                  {/* Waypoint Tracking Trajectory */}
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                      <span>09:15 AM - Dispatched: OEM Gurugram Hub</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                      <span>10:30 AM - Sector 18 Mother Sorting Center</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cyan-300 font-medium text-[11px]">
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin flex-shrink-0" />
-                      <span>{simStep >= 3 ? "02:15 PM - Delivered at Tower B Security" : "01:10 PM - Courier Rider Vikas M. (1.4 km away)"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                      <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>ETA: 2:15 PM (Precedes 3:30 PM Technician Visit)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span>ANTI-SUBSTITUTION: <b className="text-white">OEM SEAL #8821</b></span>
-                <span className="text-cyan-400 font-bold">✓ GENUINE PART ASSURED</span>
-              </div>
-            </div>
-
-            {/* RAIL 3: PINE LABS ESCROW & TENANCY RAIL */}
-            <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-4 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-[#1b2332]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                      <CreditCard className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-white font-mono">3. PINE LABS ESCROW RAIL</h3>
-                      <p className="text-[10px] text-slate-400">Plural Pre-Auth & Tenancy Split</p>
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                    otpSuccess 
-                      ? 'bg-emerald-950 border-emerald-500 text-emerald-300' 
-                      : 'bg-indigo-950 border-indigo-800 text-indigo-300'
-                  }`}>
-                    {otpSuccess ? "SETTLED & RELEASED" : "ESCROW LOCKED (₹1,450)"}
-                  </span>
-                </div>
-
-                {/* Escrow Arbitration Box */}
-                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 space-y-2.5 font-mono text-xs">
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-400">Total Approved Repair:</span>
-                    <span className="text-white font-bold">₹1,450 (Parts ₹750 + Labor ₹700)</span>
-                  </div>
-
-                  <div className="p-2.5 rounded bg-[#111522] border border-[#1f263c] space-y-1 text-[11px]">
-                    <span className="text-indigo-300 font-bold block">Lease Split (Clause 14B):</span>
-                    <div className="flex justify-between text-slate-300">
-                      <span>Tenant (Arpit Sharma):</span>
-                      <span className="text-emerald-400 font-bold">₹0</span>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>Landlord (Vikas Khanna):</span>
-                      <span className="text-indigo-300 font-bold">₹1,450 (Pre-Authorized)</span>
-                    </div>
-                  </div>
-
-                  {/* Doorstep OTP Release Form */}
-                  <div className="pt-1">
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-1">
-                      <KeyRound className="w-3 h-3 text-indigo-400" />
-                      DOORSTEP DYNAMIC PIN HANDSHAKE:
-                    </span>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={otpInput}
-                        onChange={(e) => setOtpInput(e.target.value)}
-                        disabled={otpSuccess}
-                        className="w-full px-2.5 py-1.5 rounded bg-[#121620] border border-[#232d42] text-xs text-white font-mono tracking-widest text-center focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-                        placeholder="7492"
-                      />
-                      <button
-                        onClick={triggerSettleEscrow}
-                        disabled={otpSuccess}
-                        className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1b2130] text-xs font-bold text-white transition whitespace-nowrap"
-                      >
-                        {otpSuccess ? "Released ✓" : "Verify PIN"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[#1b2332] flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span>GEOFENCE: <b className="text-white">38M FROM DOORSTEP</b></span>
-                <span className="text-indigo-400 font-bold">✓ CRYPTOGRAPHIC RELEASE</span>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* 5. HOUSEHOLD DIGITAL MACHINE TWIN FLEET REGISTRY */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <h2 className="text-xs font-mono font-bold tracking-wider text-slate-200 uppercase">
-                Household Machine Twin Fleet Registry // 3 Synchronized Appliances
-              </h2>
-            </div>
-            <span className="text-[11px] font-mono text-slate-400">
-              GODREJ WOODS TOWER B · 402
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {machines.map((machine) => (
-              <div 
-                key={machine.id}
-                className={`rounded-lg bg-[#0e121a] border p-4 space-y-3 font-mono transition ${
-                  machine.status === "CRITICAL"
-                    ? "border-red-500/60 shadow-lg shadow-red-950/20"
-                    : machine.status === "WARNING"
-                    ? "border-amber-500/40"
-                    : "border-[#1e2739] hover:border-[#2f3d57]"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-slate-500 block uppercase">{machine.location_room}</span>
-                    <h3 className="text-sm font-bold text-white font-sans tracking-tight">{machine.name}</h3>
-                    <p className="text-[11px] text-slate-400">{machine.model_number} · SN: {machine.serial_number}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    machine.status === "CRITICAL"
-                      ? "bg-red-950 border-red-500 text-red-300"
-                      : machine.status === "WARNING"
-                      ? "bg-amber-950 border-amber-500 text-amber-300"
-                      : "bg-emerald-950 border-emerald-500 text-emerald-300"
-                  }`}>
-                    {machine.status}
-                  </span>
-                </div>
-
-                {/* Health Progress Bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Machine Health Score:</span>
-                    <span className={`font-bold ${machine.health_score > 70 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {machine.health_score}%
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-[#161c28] overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        machine.health_score > 70 ? 'bg-emerald-500' : machine.health_score > 40 ? 'bg-amber-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${machine.health_score}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Machine Details Box */}
-                <div className="rounded bg-[#080b0f] border border-[#1b2230] p-3 text-[11px] space-y-1 text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Metric Tracked:</span>
-                    <span className="text-white">{machine.wear_metric_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Current Value:</span>
-                    <span className={machine.wear_metric_value > machine.wear_threshold ? "text-red-400 font-bold" : "text-emerald-400 font-bold"}>
-                      {machine.wear_metric_value} {machine.wear_unit} (Threshold: {machine.wear_threshold})
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">AMC Status:</span>
-                    <span className={machine.amc_free_visits_remaining === 0 ? "text-amber-400" : "text-emerald-400"}>
-                      {machine.has_active_amc ? `Active (${machine.amc_free_visits_remaining} visits left)` : "Expired"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Rated Power:</span>
-                    <span className="text-slate-300">{machine.power_draw_watts}W · MFG: {machine.mfg_date}</span>
-                  </div>
-                </div>
-
-                <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Sensors: Active Telemetry</span>
-                  <span className="text-cyan-400">Polling: 10s</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
       </main>
 
       {/* MODAL 1: 60-SECOND OPTICAL MEMORY INGRESS SCANNER */}
@@ -1199,12 +1384,12 @@ export default function YantraOSDashboard() {
 
               <button 
                 onClick={() => {
-                  triggerSettleEscrow();
+                  triggerGeofenceArrival();
                   setShowWhatsAppModal(false);
                 }}
                 className="w-full py-2 rounded bg-[#00a884] hover:bg-[#06cf9c] text-white font-bold text-xs text-center transition font-mono"
               >
-                [ 🟢 1-TAP PRE-AUTHORIZE (₹1,450) ]
+                [ 🟢 1-TAP PRE-AUTHORIZE (₹1,450 ESCROW) ]
               </button>
             </div>
 
