@@ -5,7 +5,7 @@ import {
   Activity, ShieldAlert, CheckCircle2, Clock, 
   Truck, PhoneCall, CreditCard, Play, Pause, KeyRound, Building2,
   Camera, MessageSquare, AlertTriangle, FileText, Cpu, Radio,
-  ArrowRight, Terminal, Zap, ShieldCheck, HelpCircle
+  Terminal, Zap, ShieldCheck, HelpCircle
 } from "lucide-react";
 
 interface Machine {
@@ -234,7 +234,7 @@ export default function YantraOSDashboard() {
     setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
-  const triggerSettleEscrow = React.useCallback((explicitOtp?: string) => {
+  const triggerSettleEscrow = React.useCallback(() => {
     setIsTransitioning(true);
     setSimStep(4);
     setOtpSuccess(true);
@@ -963,12 +963,16 @@ export default function YantraOSDashboard() {
                     </div>
                   </div>
 
-                  {/* Doorstep OTP Release Form */}
                   <div className="pt-1">
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-1">
-                      <KeyRound className="w-3 h-3 text-indigo-400" />
-                      DOORSTEP DYNAMIC PIN HANDSHAKE:
-                    </span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <KeyRound className="w-3 h-3 text-indigo-400" />
+                        DOORSTEP DYNAMIC PIN HANDSHAKE:
+                      </span>
+                      <span className="text-[10px] text-indigo-300/90 bg-indigo-950/70 border border-indigo-700/40 px-1.5 py-0.5 rounded font-mono">
+                        Demo PIN: <span className="font-bold text-indigo-200">7492</span>
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <input 
                         type="text" 

@@ -31,8 +31,10 @@ venv/
 env/
 ENV/
 .venv/
-*.db
 *.sqlite3
+# Keep the pre-seeded demo database committed for out-of-the-box evaluation
+*.db
+!**/yantra.db
 
 # Next.js & Frontend build
 .next/
