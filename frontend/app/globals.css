@@ -104,3 +104,32 @@ body {
 .animate-pulse-glow {
   animation: pulseGlow 2s ease-in-out infinite;
 }
+
+@keyframes pipelinePulse {
+  0% {
+    transform: scaleX(0.2);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.2);
+    opacity: 0.3;
+  }
+}
+
+.animate-pipeline-pulse {
+  animation: pipelinePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes feedBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-cursor-blink {
+  animation: feedBlink 0.9s infinite;
+}
+

@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { 
   Activity, ShieldAlert, CheckCircle2, Clock, 
   Truck, PhoneCall, CreditCard, Play, Pause, KeyRound, Building2,
-  Camera, MessageSquare, AlertTriangle, FileText, Cpu, Radio
+  Camera, MessageSquare, AlertTriangle, FileText, Cpu, Radio,
+  ArrowRight, Terminal, Zap, ShieldCheck, HelpCircle
 } from "lucide-react";
 
 interface Machine {
@@ -120,6 +121,21 @@ export default function YantraOSDashboard() {
 
   // Live atomic clock ticker
   const [timeTicker, setTimeTicker] = useState("21:40:12 IST");
+
+  // Live Agent Decision Feed constant log events
+  const decisionLogs = [
+    { id: 1, step: 1, time: "00:00:08", channel: "SENSOR", msg: "TDS threshold exceeded (920 ppm > 300 ppm). Wear curve anomaly: +612%." },
+    { id: 2, step: 1, time: "00:00:09", channel: "AGENT", msg: "Incident Classification triggered → SEVERITY: CRITICAL_BREACH." },
+    { id: 3, step: 1, time: "00:00:11", channel: "AGENT", msg: "Lease Clause 14B parsed → Municipal external fault: 100% Landlord Liability (₹1,450)." },
+    { id: 4, step: 2, time: "00:00:14", channel: "AGENT", msg: "Dispatching Gnani Indic Voice Rail → Target: Ramesh Kumar (Kent Certified)." },
+    { id: 5, step: 2, time: "00:01:22", channel: "GNANI", msg: "Hinglish negotiation complete. Slot locked firm @ 3:30 PM. Confidence: 96%." },
+    { id: 6, step: 3, time: "00:02:44", channel: "DELHIVERY", msg: "Automated JIT parts order placed → SKU: KENT-SP-SED-01. AWB: DEL_88291039." },
+    { id: 7, step: 3, time: "00:18:12", channel: "DELHIVERY", msg: "OEM filter package delivered at Tower B Security Gate. Anti-counterfeit seal verified." },
+    { id: 8, step: 3, time: "00:32:05", channel: "PINELABS", msg: "Plural Escrow ₹1,450 pre-authorized from Landlord Vikas Khanna. Escrow ID: PL_ESC_99182." },
+    { id: 9, step: 3, time: "00:44:50", channel: "SENSOR", msg: "Geofence ping received: Technician Ramesh 38M from flat doorstep. Entry pre-cleared." },
+    { id: 10, step: 4, time: "00:47:15", channel: "PINELABS", msg: "Doorstep OTP cryptographic handshake completed (PIN: 7492 verified). ₹1,450 released." },
+    { id: 11, step: 4, time: "00:47:20", channel: "AGENT", msg: "Post-repair hydraulic telemetry nominal (14.8 L/hr, TDS 105 ppm). Machine state: RESTORED." }
+  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -356,7 +372,7 @@ export default function YantraOSDashboard() {
       </header>
 
       {/* MAIN SYSTEM WORKSPACE */}
-      <main className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-5 space-y-6">
+      <main className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-4 space-y-5">
 
         {/* TOAST NOTIFICATION SYSTEM */}
         {activeToast && (
@@ -365,6 +381,113 @@ export default function YantraOSDashboard() {
             <span>{activeToast}</span>
           </div>
         )}
+
+        {/* 0. MISSION CONTEXT HERO STRIP: 5-SECOND HIGH LEVEL ORIENTATION */}
+        <div className="rounded-lg bg-[#0b0e14] border border-[#1b2332] overflow-hidden shadow-2xl">
+          {/* Tactical Marquee Header */}
+          <div className="bg-[#121722] border-b border-[#1f293d] px-3.5 py-1.5 flex items-center justify-between font-mono text-[11px]">
+            <div className="flex items-center gap-2 text-amber-400 font-bold tracking-wide">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span>▓ LIVE INCIDENT DISPATCH // GODREJ WOODS TOWER B, FLAT 402 // DJB TURBIDITY EVENT ▓</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-3 text-slate-400 text-[10px]">
+              <span>TENANT LIABILITY: <b className="text-emerald-400">₹0.00 (ENFORCED)</b></span>
+              <span className="text-slate-600">|</span>
+              <span>AUTONOMOUS RESTORATION: <b className="text-cyan-300">{simStep >= 4 ? "COMPLETE" : "IN PROGRESS"}</b></span>
+            </div>
+          </div>
+
+          {/* Quick Problem vs Outcome Two-Column Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#1a2233] p-3 text-xs font-mono bg-gradient-to-r from-[#0c1017] to-[#0d131d]">
+            {/* LEFT: Problem Context */}
+            <div className="flex items-center gap-3 py-1.5 md:py-0 md:pr-4">
+              <div className="w-8 h-8 rounded bg-red-950/70 border border-red-500/40 flex items-center justify-center text-red-400 flex-shrink-0">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-slate-400 uppercase">Resident:</span>
+                  <span className="text-white font-bold">Arpit Sharma</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Appliance:</span>
+                  <span className="text-cyan-300 font-bold">Kent Grand+ RO</span>
+                </div>
+                <p className="text-[10px] text-red-300 truncate">
+                  Cause: Delhi Jal Board mainline rupture · Turbidity surge (920 ppm) · AMC exhausted
+                </p>
+              </div>
+            </div>
+
+            {/* RIGHT: Outcome Context */}
+            <div className="flex items-center gap-3 py-1.5 md:py-0 md:pl-4 justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="text-slate-400 uppercase">Cost to Tenant:</span>
+                    <span className="text-emerald-400 font-black text-sm">₹0.00</span>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-slate-400">Clause 14B:</span>
+                    <span className="text-indigo-300 font-bold">100% Landlord</span>
+                  </div>
+                  <p className="text-[10px] text-slate-300">
+                    Resolution Time: <b className="text-white font-mono">{simStep >= 4 ? "47 mins total" : "47 mins projected"}</b> (vs 5-day manual AMC delay)
+                  </p>
+                </div>
+              </div>
+              <span className={`hidden lg:inline-block px-2.5 py-1 text-[10px] font-bold rounded border uppercase ${
+                simStep >= 4 ? "bg-emerald-950 border-emerald-500 text-emerald-300" : "bg-cyan-950 border-cyan-500 text-cyan-300 animate-pulse"
+              }`}>
+                {simStep >= 4 ? "RECOVERED ✓" : "AUTONOMOUS FLOW"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* IMPACT AT A GLANCE METRICS ROW */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-3 flex items-center gap-3 font-mono">
+            <div className="w-9 h-9 rounded-lg bg-amber-950/60 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-lg lg:text-xl font-black text-white">8 sec</div>
+              <div className="text-[10px] text-slate-400 uppercase leading-tight">Detection to Dispatch</div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-3 flex items-center gap-3 font-mono">
+            <div className="w-9 h-9 rounded-lg bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-indigo-400 flex-shrink-0">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-lg lg:text-xl font-black text-indigo-300">₹1,450</div>
+              <div className="text-[10px] text-slate-400 uppercase leading-tight">Landlord Clause 14B Escrow</div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-3 flex items-center gap-3 font-mono">
+            <div className="w-9 h-9 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-shrink-0">
+              <PhoneCall className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-lg lg:text-xl font-black text-emerald-400">0 Calls</div>
+              <div className="text-[10px] text-slate-400 uppercase leading-tight">Required by Resident</div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-[#0e121a] border border-[#1e2739] p-3 flex items-center gap-3 font-mono">
+            <div className="w-9 h-9 rounded-lg bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 flex-shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-lg lg:text-xl font-black text-cyan-300">{simStep >= 4 ? "47 min" : "14 min"}</div>
+              <div className="text-[10px] text-slate-400 uppercase leading-tight">{simStep >= 4 ? "Restoration Elapsed" : "ETA to Full Recovery"}</div>
+            </div>
+          </div>
+        </div>
 
         {/* 1. HERO: ACTIVE INCIDENT TELEMETRY STRIP (CRITICAL EVENT FOCUS) */}
         <section className={`rounded-xl border p-5 lg:p-6 transition-all duration-300 relative overflow-hidden ${
@@ -460,111 +583,182 @@ export default function YantraOSDashboard() {
             </div>
           </div>
 
-          {/* Connected Stepper Flow Switchboard */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
-            
-            {/* Step 1 */}
-            <button
-              onClick={triggerMudSpike}
-              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
-                simStep === 1
-                  ? "bg-[#241216] border-red-500 text-white ring-2 ring-red-500/30 shadow-lg shadow-red-950/40"
-                  : simStep > 1
-                  ? "bg-[#111722] border-[#223046] text-slate-300"
-                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    simStep === 1 ? 'bg-red-500 text-white' : simStep > 1 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
-                  }`}>
-                    {simStep > 1 ? "✓" : "1"}
-                  </span>
-                  <span className={simStep === 1 ? "text-red-400" : "text-slate-400"}>STAGE 01</span>
-                </span>
-                <span className="text-[10px] text-slate-400">T-00:00</span>
-              </div>
-              <p className="text-sm font-bold text-white tracking-tight">Municipal TDS Surge</p>
-              <p className="text-xs text-slate-300 mt-1">920 ppm breach · Pre-filter choked</p>
-            </button>
+          {/* Connected Countdown Execution Pipeline */}
+          <div className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 relative">
+              
+              {/* Step 1 */}
+              <div className="relative flex flex-col">
+                <button
+                  onClick={triggerMudSpike}
+                  className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group w-full h-full flex flex-col justify-between ${
+                    simStep === 1
+                      ? "bg-[#241216] border-red-500 text-white ring-2 ring-red-500/40 shadow-lg shadow-red-950/50"
+                      : simStep > 1
+                      ? "bg-[#0f1917] border-emerald-500/40 text-slate-300 hover:border-emerald-500/70"
+                      : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          simStep === 1 ? 'bg-red-500 text-white animate-pulse' : simStep > 1 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                        }`}>
+                          {simStep > 1 ? "✓" : "1"}
+                        </span>
+                        <span className={simStep === 1 ? "text-red-400 font-bold" : "text-slate-400"}>STAGE 01</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">T-00:00</span>
+                    </div>
+                    <p className="text-xs font-black text-white tracking-tight uppercase">
+                      01 · Turbidity Breach Detected
+                    </p>
+                    <p className="text-[11px] text-slate-300 mt-1 font-sans">
+                      920 PPM Inflow · DJB mainline rupture · Hydraulic drop
+                    </p>
+                  </div>
 
-            {/* Step 2 */}
-            <button
-              onClick={triggerNegotiate}
-              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
-                simStep === 2
-                  ? "bg-[#102419] border-emerald-500 text-white ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-950/40"
-                  : simStep > 2
-                  ? "bg-[#111722] border-[#223046] text-slate-300"
-                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    simStep === 2 ? 'bg-emerald-500 text-black' : simStep > 2 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
-                  }`}>
-                    {simStep > 2 ? "✓" : "2"}
-                  </span>
-                  <span className={simStep === 2 ? "text-emerald-400" : "text-slate-400"}>STAGE 02</span>
-                </span>
-                <span className="text-[10px] text-slate-400">T+00:04</span>
+                  <div className="mt-2.5 pt-2 border-t border-[#1a2333] flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>SEVERITY: <b className="text-red-400">CRITICAL</b></span>
+                    <span className="text-red-400 font-bold">[CLICK / 1]</span>
+                  </div>
+                </button>
               </div>
-              <p className="text-sm font-bold text-white tracking-tight">Gnani Voice Interceptor</p>
-              <p className="text-xs text-slate-300 mt-1">Locks 3:30 PM slot in Hinglish</p>
-            </button>
 
-            {/* Step 3 */}
-            <button
-              onClick={triggerGeofenceArrival}
-              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
-                simStep === 3
-                  ? "bg-[#10212f] border-cyan-500 text-white ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-950/40"
-                  : simStep > 3
-                  ? "bg-[#111722] border-[#223046] text-slate-300"
-                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    simStep === 3 ? 'bg-cyan-400 text-black' : simStep > 3 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
-                  }`}>
-                    {simStep > 3 ? "✓" : "3"}
-                  </span>
-                  <span className={simStep === 3 ? "text-cyan-400" : "text-slate-400"}>STAGE 03</span>
-                </span>
-                <span className="text-[10px] text-slate-400">T+00:18</span>
+              {/* Step 2 */}
+              <div className="relative flex flex-col">
+                <button
+                  onClick={triggerNegotiate}
+                  className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group w-full h-full flex flex-col justify-between ${
+                    simStep === 2
+                      ? "bg-[#102419] border-emerald-500 text-white ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-950/50"
+                      : simStep > 2
+                      ? "bg-[#0f1917] border-emerald-500/40 text-slate-300 hover:border-emerald-500/70"
+                      : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          simStep === 2 ? 'bg-emerald-500 text-black animate-pulse' : simStep > 2 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                        }`}>
+                          {simStep > 2 ? "✓" : "2"}
+                        </span>
+                        <span className={simStep === 2 ? "text-emerald-400 font-bold" : "text-slate-400"}>STAGE 02</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">T+00:04</span>
+                    </div>
+                    <p className="text-xs font-black text-white tracking-tight uppercase">
+                      02 · Voice AI Intercepts Tech Delay
+                    </p>
+                    <p className="text-[11px] text-slate-300 mt-1 font-sans">
+                      Slot locked firm 3:30 PM in Hinglish · Zero hostage wait
+                    </p>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-[#1a2333] flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>AGENT: <b className="text-emerald-400">GNANI.AI</b></span>
+                    <span className="text-emerald-400 font-bold">[CLICK / 2]</span>
+                  </div>
+                </button>
               </div>
-              <p className="text-sm font-bold text-white tracking-tight">Delhivery JIT Parts Arrival</p>
-              <p className="text-xs text-slate-300 mt-1">OEM cartridge delivered at gate</p>
-            </button>
 
-            {/* Step 4 */}
-            <button
-              onClick={triggerSettleEscrow}
-              className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group ${
-                simStep === 4
-                  ? "bg-[#1c1730] border-indigo-500 text-white ring-2 ring-indigo-500/30 shadow-lg shadow-indigo-950/40"
-                  : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    simStep === 4 ? 'bg-indigo-400 text-black' : 'bg-[#222c3d] text-slate-400'
-                  }`}>
-                    4
-                  </span>
-                  <span className={simStep === 4 ? "text-indigo-400" : "text-slate-400"}>STAGE 04</span>
-                </span>
-                <span className="text-[10px] text-slate-400">T+00:45</span>
+              {/* Step 3 */}
+              <div className="relative flex flex-col">
+                <button
+                  onClick={triggerGeofenceArrival}
+                  className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group w-full h-full flex flex-col justify-between ${
+                    simStep === 3
+                      ? "bg-[#10212f] border-cyan-500 text-white ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-950/50"
+                      : simStep > 3
+                      ? "bg-[#0f1917] border-emerald-500/40 text-slate-300 hover:border-emerald-500/70"
+                      : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          simStep === 3 ? 'bg-cyan-400 text-black animate-pulse' : simStep > 3 ? 'bg-emerald-500 text-black' : 'bg-[#222c3d] text-slate-400'
+                        }`}>
+                          {simStep > 3 ? "✓" : "3"}
+                        </span>
+                        <span className={simStep === 3 ? "text-cyan-400 font-bold" : "text-slate-400"}>STAGE 03</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">T+00:18</span>
+                    </div>
+                    <p className="text-xs font-black text-white tracking-tight uppercase">
+                      03 · OEM Cartridge Delivered at Gate
+                    </p>
+                    <p className="text-[11px] text-slate-300 mt-1 font-sans">
+                      Anti-counterfeit OEM seal #8821 verified via Delhivery
+                    </p>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-[#1a2333] flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>LOGISTICS: <b className="text-cyan-300">DELHIVERY</b></span>
+                    <span className="text-cyan-300 font-bold">[CLICK / 3]</span>
+                  </div>
+                </button>
               </div>
-              <p className="text-sm font-bold text-white tracking-tight">Pine Labs Escrow Settle</p>
-              <p className="text-xs text-slate-300 mt-1">OTP release · ₹1,450 to Landlord</p>
-            </button>
 
+              {/* Step 4 */}
+              <div className="relative flex flex-col">
+                <button
+                  onClick={() => triggerSettleEscrow()}
+                  className={`p-3.5 rounded-lg text-left border font-mono transition-all relative group w-full h-full flex flex-col justify-between ${
+                    simStep === 4
+                      ? "bg-[#1c1730] border-indigo-500 text-white ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-950/50"
+                      : "bg-[#0f131c] border-[#1a2333] text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          simStep === 4 ? 'bg-indigo-400 text-black animate-pulse' : 'bg-[#222c3d] text-slate-400'
+                        }`}>
+                          {simStep >= 4 && otpSuccess ? "✓" : "4"}
+                        </span>
+                        <span className={simStep === 4 ? "text-indigo-400 font-bold" : "text-slate-400"}>STAGE 04</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">T+00:45</span>
+                    </div>
+                    <p className="text-xs font-black text-white tracking-tight uppercase">
+                      04 · Doorstep Cryptographic Handshake
+                    </p>
+                    <p className="text-[11px] text-slate-300 mt-1 font-sans">
+                      PIN 7492 verification · ₹1,450 Escrow released to tech
+                    </p>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-[#1a2333] flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>SETTLEMENT: <b className="text-indigo-300">PINE LABS</b></span>
+                    <span className="text-indigo-300 font-bold">[CLICK / 4]</span>
+                  </div>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Visual Animated Pipeline Pulse Rail */}
+            <div className="hidden md:flex items-center justify-between px-6 pt-3 text-[10px] font-mono text-slate-400">
+              <span className={simStep >= 1 ? "text-red-400 font-bold" : ""}>TDS BREACH</span>
+              <div className="flex-1 mx-3 h-0.5 bg-[#1b2436] relative overflow-hidden rounded">
+                <div className={`absolute inset-0 bg-gradient-to-r from-red-500 via-emerald-400 to-cyan-400 ${simStep > 1 ? 'animate-pipeline-pulse' : 'opacity-20'}`} />
+              </div>
+              <span className={simStep >= 2 ? "text-emerald-400 font-bold" : ""}>CALL LOCKED</span>
+              <div className="flex-1 mx-3 h-0.5 bg-[#1b2436] relative overflow-hidden rounded">
+                <div className={`absolute inset-0 bg-gradient-to-r from-emerald-500 via-cyan-400 to-indigo-400 ${simStep > 2 ? 'animate-pipeline-pulse' : 'opacity-20'}`} />
+              </div>
+              <span className={simStep >= 3 ? "text-cyan-400 font-bold" : ""}>PARTS AT GATE</span>
+              <div className="flex-1 mx-3 h-0.5 bg-[#1b2436] relative overflow-hidden rounded">
+                <div className={`absolute inset-0 bg-gradient-to-r from-cyan-400 via-indigo-400 to-emerald-400 ${simStep >= 4 ? 'animate-pipeline-pulse' : 'opacity-20'}`} />
+              </div>
+              <span className={simStep >= 4 ? "text-indigo-300 font-bold" : ""}>ESCROW SETTLED</span>
+            </div>
           </div>
         </section>
 
@@ -828,6 +1022,137 @@ export default function YantraOSDashboard() {
             </div>
 
           </div>
+        </section>
+
+        {/* 3.5 LIVE AGENT DECISION FEED + COMPETITIVE BENCHMARK (HACKATHON IMPACT MODULE) */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          {/* LIVE AGENT DECISION FEED (8 cols) */}
+          <div className="lg:col-span-8 rounded-xl bg-[#090d14] border border-[#1b2537] overflow-hidden flex flex-col shadow-2xl">
+            <div className="bg-[#0e1420] px-4 py-2.5 border-b border-[#1b2537] flex items-center justify-between font-mono text-xs">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-white tracking-wide uppercase">Live Autonomous Agent Decision Feed</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-bold animate-pulse">
+                  DAEMON RUNNING
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                <span>STAGE: <b className="text-cyan-300">{simStep}/4 ACTIVE</b></span>
+                <span className="text-slate-600">|</span>
+                <span className="text-slate-400">MODEL: <b className="text-slate-200">YANTRA-DECIDE-v2</b></span>
+              </div>
+            </div>
+
+            {/* Terminal Window Content with auto-scrolling log events */}
+            <div className="p-4 font-mono text-xs space-y-2 max-h-72 overflow-y-auto bg-[#070a10]">
+              {decisionLogs.filter(log => log.step <= simStep).map((log) => (
+                <div 
+                  key={log.id} 
+                  className="flex items-start gap-2.5 py-1 px-2 rounded hover:bg-[#111827]/40 transition border-l-2 border-transparent hover:border-cyan-500"
+                >
+                  <span className="text-slate-500 text-[11px] flex-shrink-0">[{log.time}]</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${
+                    log.channel === "SENSOR" 
+                      ? "bg-red-950/80 text-red-300 border border-red-800/60" 
+                      : log.channel === "GNANI" 
+                      ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/60" 
+                      : log.channel === "DELHIVERY" 
+                      ? "bg-cyan-950/80 text-cyan-300 border border-cyan-800/60" 
+                      : log.channel === "PINELABS" 
+                      ? "bg-indigo-950/80 text-indigo-300 border border-indigo-800/60" 
+                      : "bg-amber-950/80 text-amber-300 border border-amber-800/60"
+                  }`}>
+                    {log.channel}
+                  </span>
+                  <span className="text-slate-200 text-[11px] leading-relaxed flex-1 font-sans">
+                    {log.msg}
+                  </span>
+                </div>
+              ))}
+
+              {/* Blinking Terminal Prompt Cursor */}
+              <div className="flex items-center gap-2 text-cyan-400 pt-1 text-[11px]">
+                <span className="text-emerald-400 font-bold">yantra@node-402:~$</span>
+                <span className="text-slate-400">
+                  {simStep < 4 ? "awaiting downstream rail triggers..." : "all autonomous mitigation cycles completed. Telemetry nominal."}
+                </span>
+                <span className="inline-block w-2 h-3.5 bg-cyan-400 animate-cursor-blink" />
+              </div>
+            </div>
+
+            <div className="px-4 py-2 border-t border-[#161f2f] bg-[#0b0f18] flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Zero human intervention required across 11 autonomous decisions</span>
+              </span>
+              <span className="text-emerald-400 font-bold">100% AUDIT TRAIL PRESERVED</span>
+            </div>
+          </div>
+
+          {/* "WHY NOT JUST CALL KENT AMC?" CALLOUT (4 cols) */}
+          <div className="lg:col-span-4 rounded-xl bg-[#0e131d] border border-[#232f44] p-4 flex flex-col justify-between space-y-3 font-mono shadow-xl relative overflow-hidden">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-[#1b2537]">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Why Not Just Call Kent AMC?
+                  </h3>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800">
+                  REALITY GAP
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                Standard domestic warranty & AMC contracts fail during sudden infrastructure surges:
+              </p>
+
+              <div className="space-y-2 text-[11px]">
+                <div className="p-2 rounded bg-[#090c13] border border-[#1a2333] space-y-1">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Kent AMC Free Visits:</span>
+                    <span className="text-red-400 font-bold">0 Remaining</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>AMC Callback Latency:</span>
+                    <span className="text-red-400 font-bold">4 to 6 Business Days</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Resident Waiting Time:</span>
+                    <span className="text-red-400 font-bold">5 Days No Pure Water</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Landlord Dispute Loss:</span>
+                    <span className="text-red-400 font-bold">Avg ₹3,200 (Tenant Deducted)</span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded bg-emerald-950/40 border border-emerald-500/50 space-y-1 text-emerald-300">
+                  <span className="font-bold block text-xs text-white">YantraOS Autonomous Edge:</span>
+                  <div className="flex justify-between">
+                    <span>Total Cycle:</span>
+                    <b className="text-emerald-400">47 Minutes</b>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tenant Cost:</span>
+                    <b className="text-emerald-400">₹0.00 (Enforced)</b>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Parts Authenticity:</span>
+                    <b className="text-emerald-400">100% Genuine OEM</b>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#1b2537] text-[10px] text-slate-400 flex items-center justify-between">
+              <span>LEGAL CLAUSE: <b className="text-indigo-300">14(B) ARBITRATED</b></span>
+              <span className="text-cyan-300 font-bold">✓ DISPUTE ELIMINATED</span>
+            </div>
+          </div>
+
         </section>
 
         {/* 4. HOUSEHOLD DIGITAL MACHINE TWIN FLEET REGISTRY */}
