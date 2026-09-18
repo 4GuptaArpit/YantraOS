@@ -20,7 +20,12 @@ export const metadata: Metadata = {
   title: "YantraOS — Autonomous Domestic Machine Operating System",
   description: "Autonomous Domestic Machine Memory & Dispatch Engine (The Ken Case Competition 2026: The Great Rewiring)",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 
